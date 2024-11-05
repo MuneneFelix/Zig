@@ -1,4 +1,6 @@
 const std = @import("std");
+const fs = std.fs;
+const mem = std.mem;
 const print = @import("std").debug.print;
 pub fn main() !void{
     //print("Hello World \n", .{});
@@ -99,7 +101,8 @@ pub fn main() !void{
     {
         print("Current todo title {s} \n, description {s} \n, created at {d}, priority: {any}\n due date: {s} completed: {any} \n"
         , .{elem.title,elem.description,elem.created_at,elem.priority,elem.due_date, elem.completed});
-    }  
+    }
+      
     
 
 }
@@ -253,6 +256,71 @@ pub const TodoList = struct{
             }
         }
     }
+    pub fn savetoFile(self: *Self, filename: []const u8) FileError!void
+    {  
+        const file = try fs.cwd().createFile(
+            filename, .{ .read = true, .truncate = true},
+        ) catch {
+            return FileError.WriteError;
+        };
+        defer file.close();
+        //create a buffered writer
+        var writer = file.writer();
+
+        // write each todo
+        for (self.todos_arr) |todo|
+        {
+            try writer.print("{d}|{s}|{any}|{any}|{s}|{d}|{s}|{s}\n", .{
+                todo.id,
+                todo.title,
+                todo.completed,
+                todo.priority,
+                todo.due_date,
+                todo.created_at,
+                todo.description,
+                todo.tags,
+            }) catch {
+                return FileError.WriteError;
+            };
+        }
+    }
+    pub fn loadFromFile(self: *Self, filename: []const u8) FileError!void
+    {
+        const file = try fs.cwd().openFile(
+            filename, .{},
+        ) catch  {
+            return FileError.ReadError;
+        };
+        defer file.close();
+
+        //create a buffered reader
+        var buffered = std.io.bufferedReader(file.reader());
+        var reader = buffered.reader();
+        var buf: [1024]u8 = undefined;
+
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| 
+        {
+            // For a line like: "1|Title|false|low|2024-01-01|12345|Description|tags"
+            
+            var iter = mem.split(u8, line, "|");
+            const todo = Todo{
+                .id = try std.fmt.parseInt(u64, iter.next() orelse return error.InvalidFormat, 10),
+                .title = iter.next() orelse return error.InvalidFormat,
+                .completed = mem.eql(u8, iter.next() orelse return error.InvalidFormat, "true"),
+                .priority = iter.next() orelse return error.InvalidFormat,
+                .due_date = iter.next() orelse return error.InvalidFormat,
+                .created_at = iter.next() orelse return error.InvalidFormat,
+                .description = iter.next() orelse return error.InvalidFormat,
+                .tags = iter.next() orelse return error.InvalidFormat,
+            };
+            //self.todos_arr[self.todos_count] = todo;
+            try self.addTodo(todo);
+                        
+            // ... and so on
+        }
+
+
+    }
 };
 
 const TodoError = error{
@@ -262,4 +330,10 @@ const TodoError = error{
     DuplicateId,
     EmptyList,
     PriorityTodonotFound,
+};
+const FileError = error{
+    FileNotFound,
+    InvalidFormat,
+    WriteError,
+    ReadError,
 };
