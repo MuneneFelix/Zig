@@ -91,11 +91,11 @@ pub fn main() !void{
         .tags = "sixth todo", 
     };
     try todo_list.addTodo(new_todo);
-
+    try todo_list.toggleComplete(6);
     for (todo_list.todos_arr) |elem|
     {
-        print("Current todo title {s} \n, description {s} \n, created at {d}, priority: {any}\n due date: {s} \n"
-        , .{elem.title,elem.description,elem.created_at,elem.priority,elem.due_date});
+        print("Current todo title {s} \n, description {s} \n, created at {d}, priority: {any}\n due date: {s} completed: {any} \n"
+        , .{elem.title,elem.description,elem.created_at,elem.priority,elem.due_date, elem.completed});
     }
 
     
@@ -171,10 +171,28 @@ pub const TodoList = struct{
        {
         return TodoError.TodoNotFound;
        }
-
-
-
-
+    }
+    pub fn toggleComplete(self: *Self,id:u64) TodoError!void
+    {
+        if (self.todos_count == 0)
+       {
+        return TodoError.EmptyList;
+       }
+       var indexexists: bool = false;
+       for (self.todos_arr,0..) |todo,i|
+       {
+            if (todo.id == id)
+            {
+                indexexists = true;
+                //toggle complete
+                self.todos_arr[i].completed = !self.todos_arr[i].completed;
+                print("todo index: {d} , todo title: {s}, todo status completed: {any} \n", .{self.todos_arr[i].id,self.todos_arr[i].title,self.todos_arr[i].completed});               
+            }
+       }
+       if (indexexists == false)
+       {
+        return TodoError.TodoNotFound;
+       }
     }
 };
 
