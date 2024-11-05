@@ -18,6 +18,7 @@ pub fn main() !void{
         .todos_arr = init_arr**5,
         .todos_count =  0,
     };
+    //var matched_todos_arr = init_arr**5;
     //try todo_list.addTodo(new_todo);
     print("added new todo \n", .{});
 
@@ -47,7 +48,7 @@ pub fn main() !void{
         .id = 3,
         .title = "third Todo",
         .completed = false,
-        .priority = priority.high,
+        .priority = priority.low,
         .due_date = "2024-11-05",
         .created_at = std.time.timestamp(),
         .description = "This is the third todo",
@@ -69,7 +70,7 @@ pub fn main() !void{
         .id = 5,
         .title = "fifth Todo",
         .completed = false,
-        .priority = priority.high,
+        .priority = priority.low,
         .due_date = "2024-11-05",
         .created_at = std.time.timestamp(),
         .description = "This is the fifth todo",
@@ -91,24 +92,24 @@ pub fn main() !void{
         .tags = "sixth todo", 
     };
     try todo_list.addTodo(new_todo);
-    try todo_list.toggleComplete(6);
+    //try todo_list.toggleComplete(6);
+    //matched_todos_arr = try todo_list.findByPriority(priority.high);
+    try todo_list.sortByPriority();
     for (todo_list.todos_arr) |elem|
     {
         print("Current todo title {s} \n, description {s} \n, created at {d}, priority: {any}\n due date: {s} completed: {any} \n"
         , .{elem.title,elem.description,elem.created_at,elem.priority,elem.due_date, elem.completed});
-    }
-
-    
-    
+    }  
     
 
 }
-
-const priority = enum{
-    high,
-    medium,
+pub const priority = enum{
     low,
-};
+    medium,
+    high,
+    };
+
+
 pub const Todo = struct{
     id: u64,
     title: [] const u8,
@@ -119,6 +120,7 @@ pub const Todo = struct{
     created_at: i64,
     description:[] const u8,
     tags:[] const u8,
+    
 };
 pub const TodoList = struct{
     todos_arr: [5]Todo,
@@ -194,6 +196,63 @@ pub const TodoList = struct{
         return TodoError.TodoNotFound;
        }
     }
+    pub fn findByPriority(self: *Self, priority_level: priority) TodoError![5]Todo
+    {
+        //find all todo's with supplied priority
+        const init_todo_arr = [1] Todo{undefined};
+        var matched_todos = init_todo_arr**5;
+        var matchindex: u8 = 0;
+        // return or print matching todos
+        for (self.todos_arr) |todo|
+        {
+            if (todo.priority == priority_level)
+            {
+                matched_todos[matchindex] = todo;
+                matchindex = matchindex + 1;
+            }
+        }
+        
+        //handle cases where no todos match
+        if (matchindex == 0 )
+        {
+            return TodoError.PriorityTodonotFound;
+        }
+        for (matched_todos) |todo|
+        {
+            print("Matched todo titled: {s} , priority level: {any}, Id: {d}", .{todo.title,todo.priority,todo.id});
+        }
+
+        return matched_todos;
+    }
+    pub fn sortByPriority(self: *Self) TodoError!void
+    {
+        //choose sorting algorithm
+        //implement algorithm either by inplace vs returning new array
+        //check for empty array
+        if (self.todos_count == 0)
+        {
+            return TodoError.EmptyList;
+        } 
+        var tempTodo: Todo = undefined ;
+        var flag: bool = false;
+        for (0..self.todos_arr.len) |i|
+        {
+            for(0..self.todos_arr.len-i-1) |j|
+            {
+                if (@intFromEnum(self.todos_arr[j].priority)>@intFromEnum(self.todos_arr[j+1].priority))
+                {
+                    tempTodo = self.todos_arr[j+1];
+                    self.todos_arr[j+1] = self.todos_arr[j];
+                    self.todos_arr[j] = tempTodo;
+                    flag = true;
+                }
+            }
+            if (flag==false)
+            {
+                break;
+            }
+        }
+    }
 };
 
 const TodoError = error{
@@ -202,4 +261,5 @@ const TodoError = error{
     TodoNotFound,
     DuplicateId,
     EmptyList,
+    PriorityTodonotFound,
 };
