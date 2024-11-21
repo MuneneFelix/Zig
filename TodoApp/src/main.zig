@@ -17,12 +17,12 @@ pub fn main() !void{
     };
     const init_arr = [1]Todo{undefined};
     var todo_list = TodoList{
-        .todos_arr = init_arr**5,
+        .todos_arr = init_arr**20,
         .todos_count =  0,
     };
     //var matched_todos_arr = init_arr**5;
-    //try todo_list.addTodo(new_todo);
-    print("added new todo \n", .{});
+    try todo_list.addTodo(new_todo);
+    //print("added new todo \n", .{});
 
     new_todo  = Todo {
         .id = 1,
@@ -99,11 +99,24 @@ pub fn main() !void{
     try todo_list.sortByPriority();
     for (todo_list.todos_arr) |elem|
     {
+        print("Current todo title {s} \n, description {s} \n, created at {d}, priority: {s}\n due date: {s} completed: {any} \n"
+        , .{elem.title,elem.description,elem.created_at,@tagName(elem.priority),elem.due_date, elem.completed});
+    }
+    //save to file
+    try todo_list.savetoFile("todologfile");
+    //load from file and show entries
+    for (todo_list.todos_arr) |elem|
+    {
+        try todo_list.deleteTodo(elem.id);
+    }
+    print("cleared todo's \n", .{});
+
+    try todo_list.loadFromFile("todologfile");
+    for (todo_list.todos_arr) |elem|
+    {
         print("Current todo title {s} \n, description {s} \n, created at {d}, priority: {any}\n due date: {s} completed: {any} \n"
         , .{elem.title,elem.description,elem.created_at,elem.priority,elem.due_date, elem.completed});
     }
-      
-    
 
 }
 pub const priority = enum{
@@ -126,7 +139,7 @@ pub const Todo = struct{
     
 };
 pub const TodoList = struct{
-    todos_arr: [5]Todo,
+    todos_arr: [20]Todo,
     todos_count: u8,
 
     const Self = @This();
@@ -164,12 +177,14 @@ pub const TodoList = struct{
             if (todo.id == index)
             {
                 indexexists = true;
+                if (self.todos_count>0) {
                 //delete todo
-                for (i..self.todos_count-1) |j|
-                {
-                    self.todos_arr[j] = self.todos_arr[j+1];
-                }
-                self.todos_count = self.todos_count-1;                
+                    for (i..self.todos_count-1) |j|
+                    {
+                        self.todos_arr[j] = self.todos_arr[j+1];
+                    }
+                    self.todos_count = self.todos_count-1; 
+                }               
             }
        }
        if (indexexists == false)
@@ -203,7 +218,7 @@ pub const TodoList = struct{
     {
         //find all todo's with supplied priority
         const init_todo_arr = [1] Todo{undefined};
-        var matched_todos = init_todo_arr**5;
+        var matched_todos = init_todo_arr**20;
         var matchindex: u8 = 0;
         // return or print matching todos
         for (self.todos_arr) |todo|
@@ -260,9 +275,9 @@ pub const TodoList = struct{
     {  
         const file = try fs.cwd().createFile(
             filename, .{ .read = true, .truncate = true},
-        ) catch {
-            return FileError.WriteError;
-        };
+        );//catch {
+           // return FileError.WriteError;
+       // };
         defer file.close();
         //create a buffered writer
         var writer = file.writer();
@@ -270,27 +285,27 @@ pub const TodoList = struct{
         // write each todo
         for (self.todos_arr) |todo|
         {
-            try writer.print("{d}|{s}|{any}|{any}|{s}|{d}|{s}|{s}\n", .{
+            try writer.print("{d}|{s}|{any}|{s}|{s}|{d}|{s}|{s}\n", .{
                 todo.id,
                 todo.title,
                 todo.completed,
-                todo.priority,
+                @tagName(todo.priority),
                 todo.due_date,
                 todo.created_at,
                 todo.description,
                 todo.tags,
-            }) catch {
-                return FileError.WriteError;
-            };
+            }); //catch {
+               // return FileWriteError.WriteError;
+           // };
         }
     }
     pub fn loadFromFile(self: *Self, filename: []const u8) FileError!void
     {
         const file = try fs.cwd().openFile(
             filename, .{},
-        ) catch  {
-            return FileError.ReadError;
-        };
+         ) ;//catch  {
+        //     return FileError.ReadError;
+        // };
         defer file.close();
 
         //create a buffered reader
@@ -307,14 +322,15 @@ pub const TodoList = struct{
                 .id = try std.fmt.parseInt(u64, iter.next() orelse return error.InvalidFormat, 10),
                 .title = iter.next() orelse return error.InvalidFormat,
                 .completed = mem.eql(u8, iter.next() orelse return error.InvalidFormat, "true"),
-                .priority = iter.next() orelse return error.InvalidFormat,
+                .priority = std.meta.stringToEnum(priority, iter.next() orelse return error.InvalidFormat) orelse return error.InvalidFormat,
                 .due_date = iter.next() orelse return error.InvalidFormat,
-                .created_at = iter.next() orelse return error.InvalidFormat,
+                .created_at = try std.fmt.parseInt(i64, iter.next() orelse return error.InvalidFormat, 10),
                 .description = iter.next() orelse return error.InvalidFormat,
                 .tags = iter.next() orelse return error.InvalidFormat,
             };
-            //self.todos_arr[self.todos_count] = todo;
-            try self.addTodo(todo);
+            self.todos_arr[self.todos_count] = todo;
+            self.todos_count = self.todos_count + 1;
+            //try self.addTodo(todo);
                         
             // ... and so on
         }
@@ -336,4 +352,31 @@ const FileError = error{
     InvalidFormat,
     WriteError,
     ReadError,
+    AccessDenied,ProcessFdQuotaExceeded,
+    SystemFdQuotaExceeded,
+    Unexpected,
+    FileTooBig,
+    NoSpaceLeft,
+    DeviceBusy,
+    SystemResources,
+    WouldBlock,
+    SharingViolation,
+    PathAlreadyExists,
+    PipeBusy,
+    NameTooLong,
+    InvalidUtf8,
+    InvalidWtf8,BadPathName
+    ,NetworkNotFound,AntivirusInterference,
+    SymLinkLoop,NoDevice,IsDir,
+    NotDir,FileLocksNotSupported,FileBusy,
+    DiskQuota,InputOutput,InvalidArgument,BrokenPipe,
+    OperationAborted,NotOpenForWriting,LockViolation,
+    ConnectionResetByPeer,
+    ConnectionTimedOut,
+    NotOpenForReading,
+    SocketNotConnected,
+    StreamTooLong,
+    Overflow,
+    InvalidCharacter
+
 };
