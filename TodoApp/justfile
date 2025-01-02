@@ -1,0 +1,17 @@
+default:
+    @just --list
+
+status:
+    @echo "=== Project Status ==="
+    @grep -A 2 "## Current Status" docs/PLAN.md
+
+tasks:
+    @echo "=== Outstanding Tasks ==="
+    @grep -B 1 "\[ \]" docs/PLAN.md
+
+phase1:
+    @echo "=== Phase 1 Tasks ==="
+    @sed -n '/## Phase 1/,/## Phase 2/p' docs/PLAN.md
+
+test:
+    zig test src/*.zig

@@ -139,27 +139,59 @@ pub const Todo = struct{
     
 };
 pub const TodoList = struct{
-    todos_arr: [20]Todo,
-    todos_count: u8,
+    todos: ?*Todo,
+    capacity:usize,
+    allocator: *std.mem.Allocator,
+    todos_count: usize,
 
     const Self = @This();
 
+    pub fn init(allocator: std.mem.Allocator) !Self
+    {
+        const initial_capacity = 8;
+        const todos = try allocator.alloc(Todo,initial_capacity);
+
+        return Self{
+            .todos = todos,
+            .capacity = initial_capacity,
+            .allocator = allocator,
+            .todos_count = 0,
+        };
+    }
+    pub fn deinit(self: *Self) void{
+        self.allocator.free(self.todos);
+    }
+    fn grow(self: *Self) !void {
+        const new_capacity = self.capacity * 3 / 2; // 1.5x growth factor
+        const new_todos = try self.allocator.realloc(self.todos, new_capacity);
+        self.todos = new_todos;
+        self.capacity = new_capacity;
+    }
+
+    fn shrink(self: *Self) !void {
+        const new_capacity = self.capacity / 2;
+        if (new_capacity < 8) return; // Don't shrink below initial capacity
+        const new_todos = try self.allocator.realloc(self.todos, self.capacity, new_capacity);
+        self.todos = new_todos;
+        self.capacity = new_capacity;
+    }
     pub fn addTodo(self: *Self, todo: Todo) TodoError!void {
         // Implementation will go here
         //check whether array size has been met or exceeded
-        if (self.todos_count>=self.todos_arr.len)
+        if (self.todos_count>=self.capacity)
         {
-            return TodoError.ArrayFull;
+           try self.grow();
+            //return TodoError.ArrayFull;
         }
         //check whether index already exists
-        for (self.todos_arr) |existingtodo| {
+        for (self.todos[0..self.todos_count]) |existingtodo| {
             if (existingtodo.id == todo.id)
             {
                 return TodoError.DuplicateId;
             }
         }
         //all checks passed
-        self.todos_arr[self.todos_count] = todo;
+        self.todos[self.todos_count] = todo;
         self.todos_count = self.todos_count + 1;
 
     }
@@ -172,7 +204,7 @@ pub const TodoList = struct{
         return TodoError.EmptyList;
        }
        var indexexists: bool = false;
-       for (self.todos_arr,0..) |todo,i|
+       for (self.todos[0..self.todos_count]) |todo,i|
        {
             if (todo.id == index)
             {
@@ -181,7 +213,7 @@ pub const TodoList = struct{
                 //delete todo
                     for (i..self.todos_count-1) |j|
                     {
-                        self.todos_arr[j] = self.todos_arr[j+1];
+                        self.todos[j] = self.todos[j+1];
                     }
                     self.todos_count = self.todos_count-1; 
                 }               
@@ -190,6 +222,10 @@ pub const TodoList = struct{
        if (indexexists == false)
        {
         return TodoError.TodoNotFound;
+       }
+       if (self.todos_count< self.capacity/4)
+       {
+        try self.shrink();
        }
     }
     pub fn toggleComplete(self: *Self,id:u64) TodoError!void
