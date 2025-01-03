@@ -5,7 +5,7 @@ const print = @import("std").debug.print;
 pub fn main() !void{
     //print("Hello World \n", .{});
     
-    var new_todo = Todo {
+    const new_todo = Todo {
         .id = 0,
         .title = "First Todo",
         .completed = false,
@@ -15,89 +15,91 @@ pub fn main() !void{
         .description = "This is the first todo",
         .tags = "first todo", 
     };
-    const init_arr = [1]Todo{undefined};
-    var todo_list = TodoList{
-        .todos_arr = init_arr**20,
-        .todos_count =  0,
-    };
-    //var matched_todos_arr = init_arr**5;
+        // Should be:
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+    
+    var todo_list = try TodoList.init(allocator);
+    defer todo_list.deinit();
+    //var matched_todos = init_arr**5;
     try todo_list.addTodo(new_todo);
     //print("added new todo \n", .{});
 
-    new_todo  = Todo {
-        .id = 1,
-        .title = "First Todo",
-        .completed = false,
-        .priority = priority.low,
-        .due_date = "2024-11-05",
-        .created_at = std.time.timestamp(),
-        .description = "This is the first todo",
-        .tags = "first todo", 
-    };
-    try todo_list.addTodo(new_todo);
-    new_todo = Todo {
-        .id = 2,
-        .title = "Second Todo",
-        .completed = false,
-        .priority = priority.medium,
-        .due_date = "2024-11-05",
-        .created_at = std.time.timestamp(),
-        .description = "This is the second todo",
-        .tags = "second todo", 
-    };
-    try todo_list.addTodo(new_todo);
-    new_todo = Todo {
-        .id = 3,
-        .title = "third Todo",
-        .completed = false,
-        .priority = priority.low,
-        .due_date = "2024-11-05",
-        .created_at = std.time.timestamp(),
-        .description = "This is the third todo",
-        .tags = "third todo", 
-    };
-    try todo_list.addTodo(new_todo);
-    new_todo = Todo {
-        .id = 4,
-        .title = "fourth Todo",
-        .completed = false,
-        .priority = priority.high,
-        .due_date = "2024-11-05",
-        .created_at = std.time.timestamp(),
-        .description = "This is the fourth todo",
-        .tags = "fourth todo", 
-    };
-    try todo_list.addTodo(new_todo);
-    new_todo = Todo {
-        .id = 5,
-        .title = "fifth Todo",
-        .completed = false,
-        .priority = priority.low,
-        .due_date = "2024-11-05",
-        .created_at = std.time.timestamp(),
-        .description = "This is the fifth todo",
-        .tags = "fifth todo", 
-    };
-    try todo_list.addTodo(new_todo);
-    //delete todo here
-    try todo_list.deleteTodo(1);
-    print("deleted todo \n", .{});
-    //add new todo---should not throw array full error
-    new_todo = Todo {
-        .id = 6,
-        .title = "sixth Todo",
-        .completed = false,
-        .priority = priority.high,
-        .due_date = "2024-11-05",
-        .created_at = std.time.timestamp(),
-        .description = "This is the sixth todo",
-        .tags = "sixth todo", 
-    };
-    try todo_list.addTodo(new_todo);
+    // new_todo  = Todo {
+    //     .id = 1,
+    //     .title = "First Todo",
+    //     .completed = false,
+    //     .priority = priority.low,
+    //     .due_date = "2024-11-05",
+    //     .created_at = std.time.timestamp(),
+    //     .description = "This is the first todo",
+    //     .tags = "first todo", 
+    // };
+    // try todo_list.addTodo(new_todo);
+    // new_todo = Todo {
+    //     .id = 2,
+    //     .title = "Second Todo",
+    //     .completed = false,
+    //     .priority = priority.medium,
+    //     .due_date = "2024-11-05",
+    //     .created_at = std.time.timestamp(),
+    //     .description = "This is the second todo",
+    //     .tags = "second todo", 
+    // };
+    // try todo_list.addTodo(new_todo);
+    // new_todo = Todo {
+    //     .id = 3,
+    //     .title = "third Todo",
+    //     .completed = false,
+    //     .priority = priority.low,
+    //     .due_date = "2024-11-05",
+    //     .created_at = std.time.timestamp(),
+    //     .description = "This is the third todo",
+    //     .tags = "third todo", 
+    // };
+    // try todo_list.addTodo(new_todo);
+    // new_todo = Todo {
+    //     .id = 4,
+    //     .title = "fourth Todo",
+    //     .completed = false,
+    //     .priority = priority.high,
+    //     .due_date = "2024-11-05",
+    //     .created_at = std.time.timestamp(),
+    //     .description = "This is the fourth todo",
+    //     .tags = "fourth todo", 
+    // };
+    // try todo_list.addTodo(new_todo);
+    // new_todo = Todo {
+    //     .id = 5,
+    //     .title = "fifth Todo",
+    //     .completed = false,
+    //     .priority = priority.low,
+    //     .due_date = "2024-11-05",
+    //     .created_at = std.time.timestamp(),
+    //     .description = "This is the fifth todo",
+    //     .tags = "fifth todo", 
+    // };
+    // try todo_list.addTodo(new_todo);
+    // //delete todo here
+    // try todo_list.deleteTodo(1);
+    // print("deleted todo \n", .{});
+    // //add new todo---should not throw array full error
+    // new_todo = Todo {
+    //     .id = 6,
+    //     .title = "sixth Todo",
+    //     .completed = false,
+    //     .priority = priority.high,
+    //     .due_date = "2024-11-05",
+    //     .created_at = std.time.timestamp(),
+    //     .description = "This is the sixth todo",
+    //     .tags = "sixth todo", 
+    // };
+    // try todo_list.addTodo(new_todo);
     //try todo_list.toggleComplete(6);
-    //matched_todos_arr = try todo_list.findByPriority(priority.high);
+    //matched_todos = try todo_list.findByPriority(priority.high);
     try todo_list.sortByPriority();
-    for (todo_list.todos_arr) |elem|
+    for (todo_list.todos) |elem|
     {
         print("Current todo title {s} \n, description {s} \n, created at {d}, priority: {s}\n due date: {s} completed: {any} \n"
         , .{elem.title,elem.description,elem.created_at,@tagName(elem.priority),elem.due_date, elem.completed});
@@ -105,14 +107,14 @@ pub fn main() !void{
     //save to file
     try todo_list.savetoFile("todologfile");
     //load from file and show entries
-    for (todo_list.todos_arr) |elem|
+    for (todo_list.todos) |elem|
     {
         try todo_list.deleteTodo(elem.id);
     }
     print("cleared todo's \n", .{});
 
     try todo_list.loadFromFile("todologfile");
-    for (todo_list.todos_arr) |elem|
+    for (todo_list.todos) |elem|
     {
         print("Current todo title {s} \n, description {s} \n, created at {d}, priority: {any}\n due date: {s} completed: {any} \n"
         , .{elem.title,elem.description,elem.created_at,elem.priority,elem.due_date, elem.completed});
@@ -139,9 +141,8 @@ pub const Todo = struct{
     
 };
 pub const TodoList = struct{
-    todos: ?*Todo,
-    capacity:usize,
-    allocator: *std.mem.Allocator,
+    todos: []Todo,
+    allocator: std.mem.Allocator,
     todos_count: usize,
 
     const Self = @This();
@@ -153,7 +154,6 @@ pub const TodoList = struct{
 
         return Self{
             .todos = todos,
-            .capacity = initial_capacity,
             .allocator = allocator,
             .todos_count = 0,
         };
@@ -162,29 +162,27 @@ pub const TodoList = struct{
         self.allocator.free(self.todos);
     }
     fn grow(self: *Self) !void {
-        const new_capacity = self.capacity * 3 / 2; // 1.5x growth factor
+        const new_capacity = self.todos.len * 3 / 2; // 1.5x growth factor
         const new_todos = try self.allocator.realloc(self.todos, new_capacity);
         self.todos = new_todos;
-        self.capacity = new_capacity;
     }
 
     fn shrink(self: *Self) !void {
-        const new_capacity = self.capacity / 2;
+        const new_capacity = self.todos.len / 2;
         if (new_capacity < 8) return; // Don't shrink below initial capacity
-        const new_todos = try self.allocator.realloc(self.todos, self.capacity, new_capacity);
+        const new_todos = try self.allocator.realloc(self.todos, new_capacity);
         self.todos = new_todos;
-        self.capacity = new_capacity;
     }
     pub fn addTodo(self: *Self, todo: Todo) TodoError!void {
         // Implementation will go here
         //check whether array size has been met or exceeded
-        if (self.todos_count>=self.capacity)
+        if (self.todos_count>=self.todos.len)
         {
            try self.grow();
             //return TodoError.ArrayFull;
         }
         //check whether index already exists
-        for (self.todos[0..self.todos_count]) |existingtodo| {
+        for (self.todos) |existingtodo| {
             if (existingtodo.id == todo.id)
             {
                 return TodoError.DuplicateId;
@@ -204,7 +202,7 @@ pub const TodoList = struct{
         return TodoError.EmptyList;
        }
        var indexexists: bool = false;
-       for (self.todos[0..self.todos_count]) |todo,i|
+       for (self.todos,0..) |todo,i|
        {
             if (todo.id == index)
             {
@@ -223,7 +221,7 @@ pub const TodoList = struct{
        {
         return TodoError.TodoNotFound;
        }
-       if (self.todos_count< self.capacity/4)
+       if (self.todos_count < self.todos.len/4)
        {
         try self.shrink();
        }
@@ -235,14 +233,14 @@ pub const TodoList = struct{
         return TodoError.EmptyList;
        }
        var indexexists: bool = false;
-       for (self.todos_arr,0..) |todo,i|
+       for (self.todos,0..) |todo,i|
        {
             if (todo.id == id)
             {
                 indexexists = true;
                 //toggle complete
-                self.todos_arr[i].completed = !self.todos_arr[i].completed;
-                print("todo index: {d} , todo title: {s}, todo status completed: {any} \n", .{self.todos_arr[i].id,self.todos_arr[i].title,self.todos_arr[i].completed});               
+                self.todos[i].completed = !self.todos[i].completed;
+                print("todo index: {d} , todo title: {s}, todo status completed: {any} \n", .{self.todos[i].id,self.todos[i].title,self.todos[i].completed});               
             }
        }
        if (indexexists == false)
@@ -253,11 +251,11 @@ pub const TodoList = struct{
     pub fn findByPriority(self: *Self, priority_level: priority) TodoError![5]Todo
     {
         //find all todo's with supplied priority
-        const init_todo_arr = [1] Todo{undefined};
-        var matched_todos = init_todo_arr**20;
+       
+        var matched_todos = try self.allocator.alloc(self.todos, self.todos.len);
         var matchindex: u8 = 0;
         // return or print matching todos
-        for (self.todos_arr) |todo|
+        for (self.todos) |todo|
         {
             if (todo.priority == priority_level)
             {
@@ -289,15 +287,15 @@ pub const TodoList = struct{
         } 
         var tempTodo: Todo = undefined ;
         var flag: bool = false;
-        for (0..self.todos_arr.len) |i|
+        for (0..self.todos.len) |i|
         {
-            for(0..self.todos_arr.len-i-1) |j|
+            for(0..self.todos.len-i-1) |j|
             {
-                if (@intFromEnum(self.todos_arr[j].priority)>@intFromEnum(self.todos_arr[j+1].priority))
+                if (@intFromEnum(self.todos[j].priority)>@intFromEnum(self.todos[j+1].priority))
                 {
-                    tempTodo = self.todos_arr[j+1];
-                    self.todos_arr[j+1] = self.todos_arr[j];
-                    self.todos_arr[j] = tempTodo;
+                    tempTodo = self.todos[j+1];
+                    self.todos[j+1] = self.todos[j];
+                    self.todos[j] = tempTodo;
                     flag = true;
                 }
             }
@@ -319,7 +317,7 @@ pub const TodoList = struct{
         var writer = file.writer();
 
         // write each todo
-        for (self.todos_arr) |todo|
+        for (self.todos) |todo|
         {
             try writer.print("{d}|{s}|{any}|{s}|{s}|{d}|{s}|{s}\n", .{
                 todo.id,
@@ -364,7 +362,7 @@ pub const TodoList = struct{
                 .description = iter.next() orelse return error.InvalidFormat,
                 .tags = iter.next() orelse return error.InvalidFormat,
             };
-            self.todos_arr[self.todos_count] = todo;
+            self.todos[self.todos_count] = todo;
             self.todos_count = self.todos_count + 1;
             //try self.addTodo(todo);
                         
@@ -382,6 +380,7 @@ const TodoError = error{
     DuplicateId,
     EmptyList,
     PriorityTodonotFound,
+    OutOfMemory
 };
 const FileError = error{
     FileNotFound,
