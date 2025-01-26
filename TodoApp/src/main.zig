@@ -12,10 +12,10 @@ pub fn main() !void {
     var todo_list = try TodoList.init(allocator);
     defer todo_list.deinit();
     //var matched_todos = init_arr**5;
-    var new_todo = Todo{ .id = 0, .title = "First Todo", .completed = false, .priority = priority.low, .due_date = "2024-11-05", .created_at = std.time.timestamp(), .description = "This is the first todo", .tags = "first todo" };
+   var new_todo = Todo{ .id = 0, .title = "First Todo", .completed = false, .priority = priority.low, .due_date = "2024-11-05", .created_at = std.time.timestamp(), .description = "This is the first todo", .tags = "first todo" };
 
-    try todo_list.addTodo(new_todo);
-    print("added new todo \n", .{});
+   // try todo_list.addTodo(new_todo);
+   // print("added new todo \n", .{});
 
     new_todo = Todo{
         .id = 1,
@@ -28,6 +28,7 @@ pub fn main() !void {
         .tags = "first todo",
     };
     try todo_list.addTodo(new_todo);
+    
     new_todo = Todo{
         .id = 2,
         .title = "Second Todo",
@@ -113,7 +114,9 @@ pub fn main() !void {
     //print("debugging todo struct after clearing todos: {any}", .{todo_list});
 
     try todo_list.loadFromFile("todologfile");
+    print("debugging todo struct after loading from file: {any} \n", .{todo_list});
     for (0..todo_list.todos_count) |i| {
+        print("todo details {any} ", .{todo_list.todos[i]});
         print("Current todo title: {s}, description: {s}, created at: {d}, priority: {s}, due date: {s}, completed: {any}\n", .{ todo_list.todos[i].title, todo_list.todos[i].description, todo_list.todos[i].created_at, @tagName(todo_list.todos[i].priority), todo_list.todos[i].due_date, todo_list.todos[i].completed });
     }
 }
@@ -133,6 +136,15 @@ pub const Todo = struct {
     created_at: i64,
     description: []const u8,
     tags: []const u8,
+
+    //add a deinit function to free the strings
+    pub fn deinit(self: *Todo, allocator: std.mem.Allocator) void 
+    {
+        allocator.free(self.title);
+        allocator.free(self.due_date);
+        allocator.free(self.description);
+        allocator.free(self.tags);
+    }
 };
 pub const TodoList = struct {
     todos: []Todo,
@@ -152,7 +164,13 @@ pub const TodoList = struct {
         };
     }
     pub fn deinit(self: *Self) void {
+        //free strings in each todo
+        for (0..self.todos_count) |i|
+        {
+            self.todos[i].deinit(self.allocator);
+        }
         self.allocator.free(self.todos);
+
     }
     pub fn grow(self: *Self) !void {
         const initial_capacity = self.todos.len;
@@ -173,6 +191,12 @@ pub const TodoList = struct {
     pub fn addTodo(self: *Self, todo: Todo) TodoError!void {
         // Implementation will go here
         //check whether array size has been met or exceeded
+        //TODO::DEFINE CUSTOM ERROR SET
+        //RESEARCH ERROR SETS IN DEPTH
+         if (todo.id == 0)
+         {
+            return TodoError.IllegalStart;
+         } 
         if (self.todos_count >= self.todos.len) {
             try self.grow();
             //return TodoError.ArrayFull;
@@ -184,9 +208,34 @@ pub const TodoList = struct {
                 return TodoError.DuplicateId;
             }
         }
-        //all checks passed
+        // //all checks passed
+        // const title = try self.allocator.dupe(u8, todo.title);
+        // const due_date = try self.allocator.dupe(u8, todo.due_date);
+        // const description = try self.allocator.dupe(u8, todo.description);
+        // const tags = try self.allocator.dupe(u8, todo.tags);
+        
+        // errdefer{
+        //     self.allocator.free(title);
+        //     self.allocator.free(description);
+        //     self.allocator.free(due_date);
+        //     self.allocator.free(tags);
+
+
+        // }
+        // self.todos[self.todos_count] = Todo{
+        //     .id = todo.id,
+        //     .title = title,
+        //     .completed = todo.completed,
+        //     .priority = todo.priority,
+        //     .due_date = due_date,
+        //     .created_at = todo.created_at,
+        //     .description = description,
+        //     .tags = tags,
+        // };
         self.todos[self.todos_count] = todo;
         self.todos_count = self.todos_count + 1;
+
+                
     }
 
     pub fn deleteTodo(self: *Self, index: u64) TodoError!void {
@@ -218,6 +267,21 @@ pub const TodoList = struct {
         }
         if (self.todos_count < self.todos.len / 4) {
             try self.shrink();
+        }
+        //replace deleted memory with blank todo
+        const blanktodo = Todo{
+            .id = 0,
+            .completed = false,
+            .description = "blank todo",
+            .priority = priority.low,
+            .title = "blank todo",
+            .due_date = "0000-00-00",
+            .created_at = std.time.timestamp(),
+            .tags = "undone"
+        };
+        for(self.todos_count..self.todos.len) |i|
+        {
+            self.todos[i] = blanktodo;
         }
     }
     pub fn toggleComplete(self: *Self, id: u64) TodoError!void {
@@ -310,44 +374,68 @@ pub const TodoList = struct {
             // };
         }
     }
-    pub fn loadFromFile(self: *Self, filename: []const u8) LoadingErrors!void {
-        const file = try fs.cwd().openFile(
-            filename,
-            .{},
-        ); //catch  {
-        //     return FileError.ReadError;
-        // };
+    pub fn loadFromFile(self: *Self, filename: []const u8) TodoOperationErrors!void {
+        const file = try std.fs.cwd().openFile(filename, .{});
         defer file.close();
 
-        //create a buffered reader
-        var buffered = std.io.bufferedReader(file.reader());
-        var reader = buffered.reader();
-        var buf: [1024]u8 = undefined;
-
-        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            // For a line like: "1|Title|false|low|2024-01-01|12345|Description|tags"
-
+        while (try file.reader().readUntilDelimiterOrEofAlloc(self.allocator, '\n', std.math.maxInt(usize))) |line| {
+            defer self.allocator.free(line);
             var iter = mem.split(u8, line, "|");
-            const todo = Todo{
-                .id = try std.fmt.parseInt(u64, iter.next() orelse return error.InvalidFormat, 10),
-                .title = iter.next() orelse return error.InvalidFormat,
-                .completed = mem.eql(u8, iter.next() orelse return error.InvalidFormat, "true"),
-                .priority = std.meta.stringToEnum(priority, iter.next() orelse return error.InvalidFormat) orelse return error.InvalidFormat,
-                .due_date = iter.next() orelse return error.InvalidFormat,
-                .created_at = try std.fmt.parseInt(i64, iter.next() orelse return error.InvalidFormat, 10),
-                .description = iter.next() orelse return error.InvalidFormat,
-                .tags = iter.next() orelse return error.InvalidFormat,
-            };
-            //print("\n todo: {any} \n", .{todo});
-            //self.todos[self.todos_count] = todo;
-            //self.todos_count = self.todos_count + 1;
-            try self.addTodo(todo);
 
-            // ... and so on
+            // Parse the todo data
+            const id = try std.fmt.parseInt(u64, iter.next() orelse return error.InvalidFormat, 10);
+            
+            // Create owned copies of strings using the TodoList's allocator
+            const title_temp = iter.next() orelse return error.InvalidFormat;
+            const title = try self.allocator.dupe(u8, title_temp);
+            errdefer self.allocator.free(title);
+            
+            const completed = mem.eql(u8, iter.next() orelse return error.InvalidFormat, "true");
+            const priority_str = std.meta.stringToEnum(priority, iter.next() orelse return error.InvalidFormat) orelse return error.InvalidFormat;
+            
+            const due_date_temp = iter.next() orelse return error.InvalidFormat;
+            const due_date = try self.allocator.dupe(u8, due_date_temp);
+            errdefer {
+                self.allocator.free(title);
+                self.allocator.free(due_date);
+            }
+            
+            const created_at = try std.fmt.parseInt(i64, iter.next() orelse return error.InvalidFormat, 10);
+            
+            const description_temp = iter.next() orelse return error.InvalidFormat;
+            const description = try self.allocator.dupe(u8, description_temp);
+            errdefer {
+                self.allocator.free(title);
+                self.allocator.free(due_date);
+                self.allocator.free(description);
+            }
+            
+            const tags_temp = iter.next() orelse return error.InvalidFormat;
+            const tags = try self.allocator.dupe(u8, tags_temp);
+            errdefer {
+                self.allocator.free(title);
+                self.allocator.free(due_date);
+                self.allocator.free(description);
+                self.allocator.free(tags);
+            }
+
+            const todo = Todo{
+                .id = id,
+                .title = title,
+                .completed = completed,
+                .priority = priority_str,
+                .due_date = due_date,
+                .created_at = created_at,
+                .description = description,
+                .tags = tags,
+            };
+
+            try self.addTodo(todo);
         }
     }
 };
 
-const TodoError = error{ ArrayFull, InvalidIndex, TodoNotFound, DuplicateId, EmptyList, PriorityTodonotFound, OutOfMemory, OutOfBounds };
+const TodoError = error{ ArrayFull, InvalidIndex, TodoNotFound, DuplicateId, EmptyList, PriorityTodonotFound, OutOfMemory, OutOfBounds, IllegalStart};
 const FileError = error{ FileNotFound, InvalidFormat, WriteError, ReadError, AccessDenied, ProcessFdQuotaExceeded, SystemFdQuotaExceeded, Unexpected, FileTooBig, NoSpaceLeft, DeviceBusy, SystemResources, WouldBlock, SharingViolation, PathAlreadyExists, PipeBusy, NameTooLong, InvalidUtf8, InvalidWtf8, BadPathName, NetworkNotFound, AntivirusInterference, SymLinkLoop, NoDevice, IsDir, NotDir, FileLocksNotSupported, FileBusy, DiskQuota, InputOutput, InvalidArgument, BrokenPipe, OperationAborted, NotOpenForWriting, LockViolation, ConnectionResetByPeer, ConnectionTimedOut, NotOpenForReading, SocketNotConnected, StreamTooLong, Overflow, InvalidCharacter };
 const LoadingErrors = error{ FileNotFound, InvalidFormat, WriteError, ReadError, AccessDenied, ProcessFdQuotaExceeded, SystemFdQuotaExceeded, Unexpected, FileTooBig, NoSpaceLeft, DeviceBusy, SystemResources, WouldBlock, SharingViolation, PathAlreadyExists, PipeBusy, NameTooLong, InvalidUtf8, InvalidWtf8, BadPathName, NetworkNotFound, AntivirusInterference, SymLinkLoop, NoDevice, IsDir, NotDir, FileLocksNotSupported, FileBusy, DiskQuota, InputOutput, InvalidArgument, BrokenPipe, OperationAborted, NotOpenForWriting, LockViolation, ConnectionResetByPeer, ConnectionTimedOut, NotOpenForReading, SocketNotConnected, StreamTooLong, Overflow, InvalidCharacter, ArrayFull, InvalidIndex, TodoNotFound, DuplicateId, EmptyList, PriorityTodonotFound, OutOfMemory, OutOfBounds };
+const TodoOperationErrors = TodoError || LoadingErrors;

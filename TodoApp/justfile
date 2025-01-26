@@ -1,17 +1,40 @@
 default:
     @just --list
 
+# Project Status Commands
 status:
     @echo "=== Project Status ==="
-    @grep -A 2 "## Current Status" docs/PLAN.md
+    @grep -A 2 "## Current Status" docs/PROGRESS.md
 
-tasks:
-    @echo "=== Outstanding Tasks ==="
-    @grep -B 1 "\[ \]" docs/PLAN.md
+completed:
+    @echo "=== Completed Features ==="
+    @grep -B 1 "✅" docs/PROGRESS.md
 
-phase1:
-    @echo "=== Phase 1 Tasks ==="
-    @sed -n '/## Phase 1/,/## Phase 2/p' docs/PLAN.md
+pending:
+    @echo "=== Pending Tasks ==="
+    @grep -B 1 "\[ \]" docs/PROGRESS.md
+
+# Development Commands
+build:
+    zig build
+
+run:
+    zig build run
 
 test:
     zig test src/*.zig
+
+# Project Phases
+phase1:
+    @echo "=== Phase 1: Core Implementation ==="
+    @sed -n '/## Phase 1/,/## Phase 2/p' docs/PLAN.md
+
+phase2:
+    @echo "=== Phase 2: Optimization ==="
+    @sed -n '/## Phase 2/,/## Phase 3/p' docs/PLAN.md
+
+# Current Focus
+current:
+    @echo "=== Current Focus ==="
+    @echo "String handling and file I/O optimization"
+    @echo "Memory management for parsed data"
