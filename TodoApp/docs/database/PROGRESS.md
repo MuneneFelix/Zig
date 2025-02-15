@@ -6,30 +6,19 @@
 - Completion: [X]%
 
 ## Completed Modules
-### Storage Engine
-- [ ] Basic Concepts
-- [ ] Implementation Details
-- [ ] Exercises
+### Disk Storage
+- [ ] PageManager
+- [ ] B-Tree Index
+- [ ] WAL
 
-### Buffer Management
-- [ ] Basic Concepts
-- [ ] Implementation Details
-- [ ] Exercises
+### In-Memory Cache
+- [ ] Key-Value Store
+- [ ] Expiry Manager
+- [ ] Pub/Sub System
 
-### B-tree Indexing
-- [ ] Basic Concepts
-- [ ] Implementation Details
-- [ ] Exercises
-
-### Transaction Management
-- [ ] Basic Concepts
-- [ ] Implementation Details
-- [ ] Exercises
-
-### Query Processing
-- [ ] Basic Concepts
-- [ ] Implementation Details
-- [ ] Exercises
+### Shared Components
+- [ ] Transaction Manager
+- [ ] Query Processor
 
 ## Notes & Insights
 [Add your learning insights here]
@@ -37,4 +26,4 @@
 ## Next Steps
 - [Next topic to cover]
 - [Planned implementation]
-- [Areas to review] 
+- [Areas to review]
