@@ -34,3 +34,5 @@ MIT
 
 ## Contributing
 This is a learning project. Feel free to fork and experiment!
+
+##  On 16th February we split the db implementation to another repo zig-db

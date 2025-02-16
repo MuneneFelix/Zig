@@ -88,4 +88,16 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
     test_step.dependOn(&run_exe_unit_tests.step);
+
+    // Hint: Consider adding a custom build step for db initialization
+    const init_db_step = b.addRunArtifact(exe);
+    init_db_step.addArg("init-db"); // Pass an argument to your program
+
+    // You might want to make this step depend on the main build
+    b.getInstallStep().dependOn(&init_db_step.step);
+
+    // Consider adding a clean step for the db files
+    const clean_db = b.addSystemCommand(&.{ "rm", "-f", "pages.dat" });
+    const clean_step = b.step("clean-db", "Clean database files");
+    clean_step.dependOn(&clean_db.step);
 }
